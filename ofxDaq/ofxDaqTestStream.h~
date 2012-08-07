@@ -1,0 +1,33 @@
+#include "ofMain.h"
+#include "DataStream.h"
+
+class ofxDaqSerialStream : public ofxDaqStream, public ofThread {
+
+    public:
+
+        ofxDaqSerialStream();
+        ofxDaqSerialStream(int blockSize_, int N_);
+        ofxDaqSerialStream(int blockSize_,int N_,string filePrefix);
+        ~ofxDaqSerialStream();
+        bool start(int elapsedTime);
+        bool stop();
+        bool loadSettings(ofxXmlSettings XML);
+        bool writeData();
+        bool nextFile(int elapsedTime);
+        bool dataValid(char  * dataIn,int bufferSize);
+        bool dataReady();
+        int bufferFree();
+        float getDataRate();
+        void threadedFunction();
+                         
+
+    protected:
+
+        unsigned int blockSize;
+        float dataRate;
+        float startTime;
+        unsigned int dataStartTime;
+        unsigned int N;
+        char * dataBlock;
+
+};
