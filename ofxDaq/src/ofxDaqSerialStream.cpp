@@ -1,19 +1,6 @@
 #include "ofxDaqSerialStream.h"
 
 //--------------------------------------------------------------
-ofxDaqSerialStream::ofxDaqSerialStream(){
-    fifo = new CircularFifo(256,512);
-    blockSize = 256;
-    N = 512;
-    startTime = ofGetElapsedTimef();
-    dataRate = 0;
-    dataBlock = (char*)malloc(blockSize);
-    commPort = "/dev/ttyS0";
-	deviceError = false;
-	running = false;
-    baudRate = 9600;
-}
-
 ofxDaqSerialStream::ofxDaqSerialStream(ofxXmlSettings settings){
     this->loadSettings(settings);    
     fifo = new CircularFifo(blockSize,N);
@@ -121,14 +108,15 @@ bool ofxDaqSerialStream::start(int elapsedTime){
 	writer = new ofxDaqWriter(dataDirectoryPath,filePrefix,filePostfix,fileExt);
     this->startThread(true,false);
 	running = true;
-    return writer->start(elapsedTime);
+    bool success = writer->start(elapsedTime);
+	return success;
 }
 
 //-------------------------------------------------------------
 bool ofxDaqSerialStream::stop(){
     this->stopThread(true);
 	running = false;
-    return writer->stop();
+	return writer->stop();
 }
 
 //-------------------------------------------------------------

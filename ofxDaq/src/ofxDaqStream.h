@@ -5,6 +5,7 @@
     #include "ofxDaqWriter.h"
     #include "ofxXmlSettings.h"
     #include "CircularFifo.h"
+	#include "ofxNetwork.h"
 
     class ofxDaqStream {
 
@@ -17,6 +18,7 @@
             virtual bool writeData();
             virtual bool nextFile(int elapsedTime);
             virtual bool update(int startTime, bool newFile);
+			virtual bool sendDataBlock(ofxUDPManager *udpConnection);
 			virtual bool dataReady();
             virtual bool loadSettings(ofxXmlSettings settings) = 0;
             virtual float percentBufferFree();
@@ -30,17 +32,21 @@
             CircularFifo * fifo;
 			
 			unsigned int blockSize;
+			unsigned int headerSize;
             float dataRate;
             float startTime;
             unsigned int dataStartTime;
             unsigned int N;
             char * dataBlock;
+			char * header;
+			unsigned char type;
 			string filePrefix;
 			string dataDirectoryPath;
 			string filePostfix;
 			string fileExt;
 			
 			bool writeToFile;
+			bool dataBlockFresh;
 			bool deviceError;
 			bool running;
 			

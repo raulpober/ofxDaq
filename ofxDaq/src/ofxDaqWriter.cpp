@@ -8,6 +8,8 @@ ofxDaqWriter::ofxDaqWriter(){
     fileExt = ".bin";
     fileCount = -1;
     bytesWritten = 0;
+	headerSize = 0;
+	headerData = NULL;
     dataRate = 0.0;
 }
 
@@ -20,10 +22,26 @@ ofxDaqWriter::ofxDaqWriter(string dir, string pfx, string pstfx, string ext){
     fileExt = ext;
     fileCount = -1;
     bytesWritten = 0;
+	headerSize = 0;
+	headerData = NULL;
     dataRate = 0.0;
 }
 
 ofxDaqWriter::~ofxDaqWriter(){
+	if (headerData != NULL){
+		delete headerData;
+	}
+}
+
+//--------------------------------------------------------------
+bool ofxDaqWriter::createHeader(char * headerData,unsigned int headerSize){
+
+	// Copy the header data into a new char array
+	this->headerSize = headerSize;
+	this->headerData = new char[this->headerSize];
+	memcpy(this->headerData,headerData,this->headerSize);
+	return true;
+
 }
 
 //--------------------------------------------------------------
@@ -40,9 +58,15 @@ bool ofxDaqWriter::stop(){
 //--------------------------------------------------------------
 bool ofxDaqWriter::writeData(char * data, unsigned int size){
                			
-    file.write(data,size); 
+    // Write data to file
+	file.write(data,size); 
     bytesWritten += size;
     return !(file.bad()); 
+}
+
+//--------------------------------------------------------------
+unsigned int ofxDaqWriter::getBytesWritten(){
+	return bytesWritten;
 }
 
 //--------------------------------------------------------------
@@ -51,19 +75,24 @@ bool ofxDaqWriter::nextFile(int elapsedTime){
     // Close currently open file unless none have been opened yet.
     if (fileCount >= 0){
         file.close();
+		bytesWritten = 0; // reset the byte counter.
         if (file.bad()){
             return false;
             
         }
     }
 
-    // Create new file name and open
+    // Create new file name, open, and write header if there is one defined
     if (buildFileName(elapsedTime)){
         file.open(ofFilePath::getAbsolutePath(this->fileDir + "/" + filename.c_str()).c_str(), ios::out | ios::binary);
         if (file.bad()){
             return false;
         } else {
-            return true;
+			// Write Header if there is one
+			if (headerSize > 0){
+				file.write(headerData,headerSize);
+			}
+            return !file.bad();
         }
     } else {
         return false;

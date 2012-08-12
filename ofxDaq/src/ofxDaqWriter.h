@@ -18,6 +18,8 @@
             bool stop();
             bool writeData(char * data, unsigned int size);
             bool nextFile(int elapsedTime);
+			unsigned int getBytesWritten();
+			bool createHeader(char * headerData,unsigned int headerSize);
 
         private:
 
@@ -32,6 +34,9 @@
             string filePostfix;
             string fileExt;
             string filename;
+			char * headerData;
+			unsigned int headerSize;
+
 
     }; 
 

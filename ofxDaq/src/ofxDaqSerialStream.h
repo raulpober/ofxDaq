@@ -7,7 +7,6 @@
 
         public:
 
-            ofxDaqSerialStream();
 			ofxDaqSerialStream(ofxXmlSettings settings);
             ~ofxDaqSerialStream();
             bool start(int elapsedTime);

@@ -38,6 +38,11 @@
 			ofDirectory dataDir;
 			ofxDaqLog daqLog;
 			
+			bool enableNetworkTransfer;
+			string ipAdd;
+			unsigned short netPort;
+			ofxUDPManager udpConnection;
+			
             
 
     };

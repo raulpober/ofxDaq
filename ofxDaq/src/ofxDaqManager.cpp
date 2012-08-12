@@ -4,23 +4,27 @@
 ofxDaqManager::ofxDaqManager(){
     delayTime = 100;
     nextFileTime = 30000;
+	enableNetworkTransfer = false;
 }
 
 //--------------------------------------------------------------
 ofxDaqManager::ofxDaqManager(unsigned int delay){
     delayTime = delay;
     nextFileTime = 30000;
+	enableNetworkTransfer = false;
 }
 
 //--------------------------------------------------------------
 ofxDaqManager::ofxDaqManager(unsigned int delay, unsigned int fileTime){
     delayTime = delay;
     nextFileTime = fileTime;
+	enableNetworkTransfer = false;
 }
 
 //--------------------------------------------------------------
 ofxDaqManager::ofxDaqManager(ofxXmlSettings settings){
     
+	enableNetworkTransfer = false;
 	this->loadSettings(settings);
 }
 
@@ -33,6 +37,12 @@ bool ofxDaqManager::loadSettings(ofxXmlSettings settings){
 	nextFileTime = settings.getValue("settings:nextfiletime",30000);
 	dataRoot = settings.getValue("settings:dataroot","/data");
 	globalFilePrefix = settings.getValue("settings:globalfileprefix","EXP");
+	ipAdd = settings.getValue("settings:ipaddress","-1");
+	netPort = settings.getValue("settings:netport",0);
+
+	if (netPort != 0){
+		enableNetworkTransfer = true;
+	}
 	
 	return true;
 }
@@ -46,6 +56,13 @@ string ofxDaqManager::getDataDirectory(){
 bool ofxDaqManager::start(int elapsedTime){
 
 	string timestamp;
+
+	// Setup UDP if requested
+	if (enableNetworkTransfer){
+		udpConnection.Create();
+		udpConnection.Connect(ipAdd.c_str(),netPort);
+		udpConnection.SetNonBlocking(true);
+	}
 
 	// Setup the data directory and logging
 	
@@ -81,6 +98,12 @@ bool ofxDaqManager::start(int elapsedTime){
 bool ofxDaqManager::stop(){
     this->stopThread(true);
 	daqLog.logNotice("DAQ MANAGER","STOPPING DATA STREAMS");
+	
+	// Setup UDP if requested
+	if (enableNetworkTransfer){
+		udpConnection.Close();
+	}
+	
     // Iterate over the streams and 
     for(unsigned int i=0; i<streams.size(); i++){
         streams[i]->stop();
@@ -133,7 +156,12 @@ void ofxDaqManager::threadedFunction() {
                 startTime = time;
             }
             
-            streams[i]->update(time,newFile);        
+            streams[i]->update(time,newFile); 
+			
+			// If network is enabled then tx
+			if (enableNetworkTransfer){
+				streams[i]->sendDataBlock(&udpConnection);
+			}       
 
         }   
 

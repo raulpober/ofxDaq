@@ -2,6 +2,13 @@
 
 //---------------------------------------------------------------
 ofxDaqStream::ofxDaqStream(){
+	headerSize = 0;
+	blockSize = 0;
+	N = 0;
+	dataBlock = NULL;
+	header = NULL;
+	type = -1;
+	dataBlockFresh = false;
 
 }
 
@@ -55,12 +62,97 @@ bool ofxDaqStream::update(int startTime, bool newFile){
         }
     
     }
+	
+	// If we made it here, then there is fresh data in the dataBlock
+	dataBlockFresh = true;
+	
     return true;
+}
+
+//-------------------------------------------------------------
+bool ofxDaqStream::sendDataBlock(ofxUDPManager * udpConnection){
+
+	
+	// Prepare the data to send:
+	//
+	// One byte: TypeID
+	// One byte: multiMessage? 0-> all in one message, 1 -> multiple meesages
+	// Total Bytes (includes 2 above)
+	// Header Bytes
+	// Data Bytes
+	//
+	// Total length (bytes) = 2 + headerLength + dataLength
+	
+	if (!dataBlockFresh){
+		return true;
+	}
+	
+	int maxSize = 65000;
+	int sent = 0;
+	int totalSize;
+	cout << "Total Size: " << totalSize << endl;
+	int index = 0;
+	totalSize = 2*sizeof(char) + 1*sizeof(int) +  blockSize + headerSize;
+	char * msg = (char*)malloc(totalSize);
+	if (msg == NULL){
+		cout << "Could not create msg" << endl;
+		return false;
+	}
+	if (totalSize > maxSize){
+		// Multi-msg
+		msg[0] = type;
+		index += 1;
+		msg[1] = 1; // multi-msg data
+		index += 1;
+		memcpy(msg+index,(char*)&totalSize,sizeof(totalSize));
+		index += sizeof(totalSize);
+		if (header != NULL){
+			memcpy(msg+index,header,headerSize);
+			index += headerSize;
+		}
+		memcpy(msg+index,dataBlock,blockSize);
+		index += blockSize;
+		
+		index = 0;
+		int txSize = maxSize;
+		while (txSize > 0){
+			sent += udpConnection->Send(msg + index,txSize);
+			index += txSize;
+			txSize = totalSize - index;
+			if (txSize > maxSize){
+				txSize = maxSize;
+			}
+		}
+		
+	} 
+	else{
+		msg[0] = type;
+		index += 1;
+		msg[1] = 0; // single msg data
+		index += 1;
+		memcpy(msg+index,&totalSize,sizeof(int));
+		index += sizeof(int);
+		if (header != NULL){
+			memcpy(msg+index,header,headerSize);
+			index += headerSize;
+		}
+		memcpy(msg+index,dataBlock,blockSize);
+		index += blockSize;
+		sent = udpConnection->Send(msg,totalSize);
+	}
+	
+	// Mark the data block as being stale
+	dataBlockFresh = false;
+	
+	free(msg);
+	
+	return totalSize == sent;
 }
 
 //-------------------------------------------------------------  
 bool ofxDaqStream::nextFile(int elapsedTime){
-    return writer->nextFile(elapsedTime);
+	bool success = writer->nextFile(elapsedTime);
+    return success;
 }
 
 //-------------------------------------------------------------
