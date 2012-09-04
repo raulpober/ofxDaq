@@ -47,7 +47,7 @@ void ofxDaqLog::logError(DaqErr type, int id, string name, int code){
 	report += ", ERROR CODE = " + ofToString(code);
 	
 	// Write to the log
-	ofLogError() << report << endl;
+	ofLogError() << report;
 
 }
 
@@ -91,7 +91,7 @@ void ofxDaqLog::logError(DaqErr type, int id, string name, string msg){
 	report += ", ERROR MSG = " + msg;
 	
 	// Write to the log
-	ofLogError() << report << endl;
+	ofLogError() << report;
 
 }
 
@@ -101,7 +101,7 @@ void ofxDaqLog::logWarning(string name, string msg){
 	string report = ofGetTimestampString() + " : DEVICE = " + name + ", MSG: " + msg;
 	
 	// Write to the log
-	ofLogWarning() << report << endl;
+	ofLogWarning() << report;
 	
 }
 
@@ -111,6 +111,6 @@ void ofxDaqLog::logNotice(string name, string msg){
 	string report = ofGetTimestampString() + " : DEVICE = " + name + ", MSG: " + msg;
 	
 	// Write to the log
-	ofLogNotice() << report << endl;
+	ofLogNotice() << report;
 	
 }

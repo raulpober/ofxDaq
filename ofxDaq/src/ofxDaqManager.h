@@ -39,6 +39,7 @@
 			ofxDaqLog daqLog;
 			
 			bool enableNetworkTransfer;
+			bool clientConnected;
 			string ipAdd;
 			unsigned short netPort;
 			ofxUDPManager udpConnection;

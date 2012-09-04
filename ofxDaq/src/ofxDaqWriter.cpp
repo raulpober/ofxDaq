@@ -8,8 +8,6 @@ ofxDaqWriter::ofxDaqWriter(){
     fileExt = ".bin";
     fileCount = -1;
     bytesWritten = 0;
-	headerSize = 0;
-	headerData = NULL;
     dataRate = 0.0;
 }
 
@@ -22,26 +20,10 @@ ofxDaqWriter::ofxDaqWriter(string dir, string pfx, string pstfx, string ext){
     fileExt = ext;
     fileCount = -1;
     bytesWritten = 0;
-	headerSize = 0;
-	headerData = NULL;
     dataRate = 0.0;
 }
 
 ofxDaqWriter::~ofxDaqWriter(){
-	if (headerData != NULL){
-		delete headerData;
-	}
-}
-
-//--------------------------------------------------------------
-bool ofxDaqWriter::createHeader(char * headerData,unsigned int headerSize){
-
-	// Copy the header data into a new char array
-	this->headerSize = headerSize;
-	this->headerData = new char[this->headerSize];
-	memcpy(this->headerData,headerData,this->headerSize);
-	return true;
-
 }
 
 //--------------------------------------------------------------
@@ -88,10 +70,6 @@ bool ofxDaqWriter::nextFile(int elapsedTime){
         if (file.bad()){
             return false;
         } else {
-			// Write Header if there is one
-			if (headerSize > 0){
-				file.write(headerData,headerSize);
-			}
             return !file.bad();
         }
     } else {

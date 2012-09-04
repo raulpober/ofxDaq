@@ -16,10 +16,12 @@
 			virtual bool start(int elapsedTime) = 0;
             virtual bool stop() = 0;
             virtual bool writeData();
+			virtual bool defineHeader();
             virtual bool nextFile(int elapsedTime);
             virtual bool update(int startTime, bool newFile);
 			virtual bool sendDataBlock(ofxUDPManager *udpConnection);
 			virtual bool dataReady();
+			virtual bool checkStatus();
             virtual bool loadSettings(ofxXmlSettings settings) = 0;
             virtual float percentBufferFree();
             virtual float getDataRate() = 0;

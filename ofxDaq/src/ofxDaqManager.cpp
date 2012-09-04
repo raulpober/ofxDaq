@@ -5,6 +5,7 @@ ofxDaqManager::ofxDaqManager(){
     delayTime = 100;
     nextFileTime = 30000;
 	enableNetworkTransfer = false;
+	clientConnected = false;
 }
 
 //--------------------------------------------------------------
@@ -12,6 +13,7 @@ ofxDaqManager::ofxDaqManager(unsigned int delay){
     delayTime = delay;
     nextFileTime = 30000;
 	enableNetworkTransfer = false;
+	clientConnected = false;
 }
 
 //--------------------------------------------------------------
@@ -19,13 +21,25 @@ ofxDaqManager::ofxDaqManager(unsigned int delay, unsigned int fileTime){
     delayTime = delay;
     nextFileTime = fileTime;
 	enableNetworkTransfer = false;
+	clientConnected = false;
 }
 
 //--------------------------------------------------------------
 ofxDaqManager::ofxDaqManager(ofxXmlSettings settings){
     
 	enableNetworkTransfer = false;
+	clientConnected = false;
 	this->loadSettings(settings);
+}
+
+//-------------------------------------------------------------
+ofxDaqManager::~ofxDaqManager() {
+	daqLog.logNotice("DAQ MANAGER","DELETING DATA STREAMS");
+	if (enableNetworkTransfer){
+		udpConnection.Close();
+	}
+    streams.clear();
+	daqLog.logNotice("DAQ MANAGER","DELETING DATA STREAMS CLEARED");
 }
 
 //-------------------------------------------------------------
@@ -112,13 +126,6 @@ bool ofxDaqManager::stop(){
 }
 
 //-------------------------------------------------------------
-ofxDaqManager::~ofxDaqManager() {
-	daqLog.logNotice("DAQ MANAGER","DELETING DAQ STREAMS");
-
-    streams.clear();
-}
-
-//-------------------------------------------------------------
 void ofxDaqManager::setGlobalFilePrefix(string prefix) {
     globalFilePrefix = prefix;
 	for(unsigned int i=0; i<streams.size(); i++){
@@ -137,19 +144,27 @@ void ofxDaqManager::setGlobalDataDirectory(string dataDir){
 //-------------------------------------------------------------
 void ofxDaqManager::threadedFunction() {
     
-    // Conitune while the thread is running
+    float timer = ofGetElapsedTimef();
+	float clientTimer = timer;
+	char udpMessage[100];
+	
+	
+	// Conitune while the thread is running
     while(isThreadRunning()) {
         
         // Save the time to apply to all streams when updating
         // file names.
         int time = ofGetElapsedTimeMillis();
+		int recentReceived = 1;
+		clientConnected = false;
 
         // Check ellapsed time
         unsigned int elapsedTime = time - startTime;
         bool newFile = elapsedTime >= nextFileTime;
     
         // Iterate over the streams and update (write, etc)
-        for(unsigned int i=0; i<streams.size(); i++){
+        bool restart = false;
+		for(unsigned int i=0; i<streams.size(); i++){
             
             if (newFile){
                 // Update the start time
@@ -160,10 +175,59 @@ void ofxDaqManager::threadedFunction() {
 			
 			// If network is enabled then tx
 			if (enableNetworkTransfer){
-				streams[i]->sendDataBlock(&udpConnection);
-			}       
+				// Only send data blocks when a client is connected
+				if (clientConnected){
+					streams[i]->sendDataBlock(&udpConnection);
+					string msg = " This is a status msg: " + ofGetTimestampString(); 
+					msg[0] = 4;
+					udpConnection.Send(msg.c_str(),msg.length());
+				}
+				
+				/*int received = udpConnection.Receive(udpMessage,100);
+				
+				if (received > 0){
+					recentReceived = received;
+					if(!clientConnected){
+						clientConnected = true;
+						daqLog.logNotice("DAQ MANAGER","CLIENT CONNECTED");
+					}
+				}
+				if (((recentReceived <= 0) || (ofGetElapsedTimef() - clientTimer > 10.0)) && clientConnected){
+					if (recentReceived <= 0){
+						clientConnected = false;
+						daqLog.logNotice("DAQ MANAGER","CLIENT DISCONNECTED");
+					}
+					clientTimer = ofGetElapsedTimef();
+					recentReceived = 0;
+				}*/
+				
+			}      
+			
+			// Check status every 10 seconds
+			if (ofGetElapsedTimef() - timer > 10){
+				if (!streams[i]->checkStatus()){
+					restart = true;
+				}
+				timer = ofGetElapsedTimef();
+			}
+			
 
         }   
+		
+		if (restart){
+			// restart the streams and log it
+			daqLog.logNotice("DAQ MANAGER", "RESTARTING STREAMS DUE TO FAILED STATUS CHECK");
+			// Iterate over the streams and 
+			for(unsigned int i=0; i<streams.size(); i++){
+				streams[i]->stop();
+			}
+			ofSleepMillis(10);
+			int startTime = ofGetElapsedTimeMillis(); 
+			// Start the streams, then the monitor thread
+			for(unsigned int i=0; i<streams.size(); i++){
+				streams[i]->start(startTime);
+			}
+		}
 
         // Wait
         ofSleepMillis(delayTime);     
